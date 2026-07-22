@@ -1,0 +1,215 @@
+// Life Wishlist — Prisma schema
+// PostgreSQL (Supabase-ready). See README for deployment notes.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ------------------------------------------------------------------
+// Singleton settings + admin credentials
+// ------------------------------------------------------------------
+model Settings {
+  id                String   @id @default("singleton")
+  adminUsername     String   @default("admin")
+  passwordHash      String? // null until first-run /setup completes
+  resetCodeHash     String? // hashed security code for password reset
+  tokenVersion      Int      @default(0) // bump to invalidate every active session
+  publicViewing     Boolean  @default(true)
+  autoLogoutMinutes Int      @default(30)
+  theme             String   @default("system") // light | dark | system
+  accentColor       String   @default("violet")
+  currency          String   @default("USD")
+  monthlyBudget     Float?
+  yearlyBudget      Float?
+  savingsGoal       Float?
+  savingsCurrent    Float?   @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// ------------------------------------------------------------------
+// Taxonomy
+// ------------------------------------------------------------------
+model Category {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  slug        String     @unique
+  icon        String? // lucide icon name or emoji
+  color       String?
+  description String?
+  parentId    String?
+  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Category[] @relation("CategoryTree")
+  items       Item[]
+  budgets     Budget[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([parentId])
+}
+
+model Collection {
+  id           String       @id @default(cuid())
+  name         String
+  slug         String       @unique
+  description  String?
+  icon         String?
+  color        String?
+  coverImage   String?
+  targetBudget Float?
+  parentId     String?
+  parent       Collection?  @relation("CollectionTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children     Collection[] @relation("CollectionTree")
+  items        Item[]       @relation("ItemCollections")
+  budgets      Budget[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([parentId])
+}
+
+model Room {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  icon        String?
+  color       String?
+  description String?
+  imageUrl    String?
+  items       Item[]   @relation("ItemRooms")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ------------------------------------------------------------------
+// The universal Item
+// ------------------------------------------------------------------
+model Item {
+  id          String  @id @default(cuid())
+  title       String
+  slug        String  @unique
+  description String?
+  notes       String? // markdown / rich text
+
+  brand       String?
+  model       String?
+  color       String?
+  condition   String? // New, Used, Refurbished, Open Box...
+  tags        String[]
+  subcategory String?
+
+  priority String @default("MEDIUM") // see PRIORITIES constant
+  status   String @default("WISHLISTED") // see STATUSES constant
+
+  store    String?
+  vendor   String?
+  url      String?
+  imageUrl String?
+  gallery  String[]
+  sku      String?
+
+  msrp             Float?
+  currentPrice     Float?
+  discountPrice    Float?
+  taxEstimate      Float?
+  shippingEstimate Float?
+  quantityDesired  Int    @default(1)
+  quantityOwned    Int    @default(0)
+
+  locationType String? // ONLINE | PHYSICAL_STORE | MARKETPLACE
+  country      String?
+
+  dateOrdered   DateTime?
+  dateAcquired  DateTime?
+  dateArchived  DateTime?
+  serialNumber  String?
+  warrantyUntil DateTime?
+
+  favorite   Boolean @default(false)
+  pinned     Boolean @default(false)
+  isPcPart   Boolean @default(false)
+  pcPartType String? // CPU | GPU | MOTHERBOARD | RAM | STORAGE | CASE | PSU | COOLING | FANS | PERIPHERAL
+
+  customFields Json? // [{ label, value }]
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  collections  Collection[]   @relation("ItemCollections")
+  rooms        Room[]         @relation("ItemRooms")
+  vehicle      Vehicle?
+  priceHistory PriceHistory[]
+
+  relatedItems Item[] @relation("RelatedItems")
+  relatedBy    Item[] @relation("RelatedItems")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+model Vehicle {
+  id            String  @id @default(cuid())
+  itemId        String  @unique
+  item          Item    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  vehicleType   String  @default("CAR") // CAR | MOTORCYCLE
+  make          String?
+  model         String?
+  year          Int?
+  trim          String?
+  mileage       Int?
+  horsepower    Int?
+  targetPrice   Float?
+  ownershipCost Float?
+}
+
+model PriceHistory {
+  id         String   @id @default(cuid())
+  itemId     String
+  item       Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  price      Float
+  source     String?
+  note       String?
+  recordedAt DateTime @default(now())
+
+  @@index([itemId])
+}
+
+// ------------------------------------------------------------------
+// Budgets + activity feed
+// ------------------------------------------------------------------
+model Budget {
+  id           String      @id @default(cuid())
+  name         String
+  scope        String      @default("GLOBAL") // GLOBAL | CATEGORY | COLLECTION
+  period       String      @default("MONTHLY") // MONTHLY | YEARLY | TOTAL
+  amount       Float
+  categoryId   String?
+  category     Category?   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  collectionId String?
+  collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  type      String // ITEM_ADDED | PRICE_UPDATED | STATUS_CHANGED | ITEM_ACQUIRED | ...
+  message   String
+  itemId    String?
+  itemTitle String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
