@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { BarChart3 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
   ChartCard,
   DonutChart,
@@ -17,6 +19,7 @@ import { formatCurrency, formatCurrencyCompact } from "@/lib/utils";
 
 export default function AnalyticsPage() {
   const { data: stats, isLoading } = useStats();
+  const [useLogScale, setUseLogScale] = useState(false);
   const currency = stats?.currency ?? "USD";
   const fc = (v: number) => formatCurrency(v, currency);
   const fcc = (v: number) => formatCurrencyCompact(v, currency);
@@ -37,6 +40,13 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Analytics" description="Deep insight into your wishlist, spending & progress." icon={BarChart3} />
+
+      <div className="flex justify-end">
+        <label className="flex items-center gap-2 rounded-full border border-border/70 bg-background/60 px-3 py-2 text-sm text-muted-foreground">
+          <Switch checked={useLogScale} onCheckedChange={setUseLogScale} />
+          <span>Use log scale for large values</span>
+        </label>
+      </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Total Value" value={fc(t.totalValue)} accent="#8b5cf6" />
@@ -72,6 +82,7 @@ export default function AnalyticsPage() {
           {stats.byCategory.length ? (
             <BarChartComp
               horizontal
+              scale={useLogScale ? "log" : "linear"}
               height={Math.max(240, stats.byCategory.slice(0, 10).length * 34)}
               data={stats.byCategory.slice(0, 10).map((c) => ({ name: c.name, value: Math.round(c.value), color: c.color }))}
               valueFormatter={fc}
@@ -100,18 +111,18 @@ export default function AnalyticsPage() {
 
         <ChartCard title="Category Value Treemap" description="Proportional value by category" className="lg:col-span-2">
           {stats.byCategory.length ? (
-            <TreemapChart data={stats.byCategory.map((c) => ({ name: c.name, value: Math.round(c.value), color: c.color }))} valueFormatter={fc} />
+            <TreemapChart scale={useLogScale ? "log" : "linear"} data={stats.byCategory.map((c) => ({ name: c.name, value: Math.round(c.value), color: c.color }))} valueFormatter={fc} />
           ) : <Empty />}
         </ChartCard>
 
         {stats.byRoom.length > 0 && (
           <ChartCard title="Value by Room" description="Investment per space">
-            <BarChartComp horizontal data={stats.byRoom.map((r) => ({ name: r.name, value: Math.round(r.value), color: r.color }))} valueFormatter={fc} />
+            <BarChartComp horizontal scale={useLogScale ? "log" : "linear"} data={stats.byRoom.map((r) => ({ name: r.name, value: Math.round(r.value), color: r.color }))} valueFormatter={fc} />
           </ChartCard>
         )}
         {stats.byCollection.length > 0 && (
           <ChartCard title="Value by Collection" description="Investment per collection">
-            <BarChartComp horizontal data={stats.byCollection.map((c) => ({ name: c.name, value: Math.round(c.value), color: c.color }))} valueFormatter={fc} />
+            <BarChartComp horizontal scale={useLogScale ? "log" : "linear"} data={stats.byCollection.map((c) => ({ name: c.name, value: Math.round(c.value), color: c.color }))} valueFormatter={fc} />
           </ChartCard>
         )}
 

@@ -52,13 +52,16 @@ function TooltipBox({ active, payload, label, formatter }: any) {
   return (
     <div className="glass-strong rounded-lg px-3 py-2 text-xs shadow-lg">
       {title != null && title !== "" && <p className="mb-1 font-medium text-foreground">{title}</p>}
-      {payload.map((p: any, i: number) => (
-        <p key={i} className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full" style={{ background: p.color || p.fill }} />
-          <span className="text-muted-foreground">{p.name}:</span>
-          <span className="font-medium text-foreground">{formatter ? formatter(p.value) : p.value}</span>
-        </p>
-      ))}
+      {payload.map((p: any, i: number) => {
+        const rawValue = p.payload?.originalValue ?? p.value;
+        return (
+          <p key={i} className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full" style={{ background: p.color || p.fill }} />
+            <span className="text-muted-foreground">{p.name}:</span>
+            <span className="font-medium text-foreground">{formatter ? formatter(rawValue) : rawValue}</span>
+          </p>
+        );
+      })}
     </div>
   );
 }
@@ -158,24 +161,40 @@ export function BarChartComp({
   color = "#8b5cf6",
   valueFormatter,
   horizontal = false,
+  scale = "linear",
 }: {
   data: Datum[];
   height?: number;
   color?: string;
   valueFormatter?: (v: number) => string;
   horizontal?: boolean;
+  scale?: "linear" | "log";
 }) {
+  const chartData = data.map((d) => ({
+    ...d,
+    originalValue: d.value,
+    value: scale === "log" && d.value > 0 ? Math.log10(d.value + 1) : d.value,
+  }));
+
+  const formatAxisValue = (v: number) => {
+    if (scale === "log") {
+      const originalValue = Math.pow(10, v) - 1;
+      return valueFormatter ? valueFormatter(originalValue) : String(Math.round(originalValue));
+    }
+    return valueFormatter ? valueFormatter(v) : String(v);
+  };
+
   return (
     <ResponsiveContainer width="100%" height={height} className={AXIS_WRAP}>
       <BarChart
-        data={data}
+        data={chartData}
         layout={horizontal ? "vertical" : "horizontal"}
         margin={{ left: horizontal ? 12 : 0, right: 12, top: 8, bottom: horizontal ? 4 : 24 }}
       >
         <CartesianGrid strokeDasharray="3 3" stroke={GRID} strokeOpacity={0.15} vertical={horizontal} horizontal={!horizontal} />
         {horizontal ? (
           <>
-            <XAxis type="number" tick={TICK} tickLine={false} axisLine={false} tickFormatter={(v) => (valueFormatter ? valueFormatter(v) : v)} />
+            <XAxis type="number" tick={TICK} tickLine={false} axisLine={false} tickFormatter={formatAxisValue} />
             <YAxis type="category" dataKey="name" width={110} tick={TICK} tickLine={false} axisLine={false} />
           </>
         ) : (
@@ -190,12 +209,12 @@ export function BarChartComp({
               textAnchor="end"
               height={56}
             />
-            <YAxis tick={TICK} tickLine={false} axisLine={false} width={44} />
+            <YAxis tick={TICK} tickLine={false} axisLine={false} width={44} tickFormatter={formatAxisValue} />
           </>
         )}
         <Tooltip cursor={{ fill: "currentColor", opacity: 0.06 }} content={<TooltipBox formatter={valueFormatter} />} />
         <Bar dataKey="value" radius={horizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]} maxBarSize={48}>
-          {data.map((d, i) => (
+          {chartData.map((d, i) => (
             <Cell key={i} fill={d.color || color} />
           ))}
         </Bar>
@@ -276,12 +295,19 @@ export function TreemapChart({
   data,
   height = 280,
   valueFormatter,
+  scale = "linear",
 }: {
   data: Datum[];
   height?: number;
   valueFormatter?: (v: number) => string;
+  scale?: "linear" | "log";
 }) {
-  const treeData = data.map((d, i) => ({ ...d, fill: d.color || PALETTE[i % PALETTE.length] }));
+  const treeData = data.map((d, i) => ({
+    ...d,
+    originalValue: d.value,
+    value: scale === "log" && d.value > 0 ? Math.log10(d.value + 1) : d.value,
+    fill: d.color || PALETTE[i % PALETTE.length],
+  }));
   return (
     <ResponsiveContainer width="100%" height={height}>
       <Treemap data={treeData} dataKey="value" stroke="hsl(var(--background))" content={<TreemapCell />}>
