@@ -564,7 +564,7 @@ export function ItemForm({ item }: { item?: Item }) {
         </TabsContent>
       </Tabs>
 
-      <div className="sticky bottom-4 z-10 flex items-center justify-end gap-2 rounded-xl glass-strong p-3">
+      <div className="sticky bottom-20 z-10 flex items-center justify-end gap-2 rounded-xl glass-strong p-3 lg:bottom-4">
         <Button type="button" variant="ghost" onClick={() => router.back()}>Cancel</Button>
         <Button type="submit" variant="gradient" disabled={pending}>
           {pending ? "Saving…" : item ? "Save changes" : "Add to Wishlist"}

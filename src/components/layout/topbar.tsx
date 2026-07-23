@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, Plus, Search } from "lucide-react";
+import { Plus, Search, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AdminMenu } from "./admin-menu";
@@ -10,21 +10,17 @@ import { useSession } from "@/hooks/queries";
 
 export function Topbar() {
   const setCommandOpen = useUi((s) => s.setCommandOpen);
-  const setSidebarOpen = useUi((s) => s.setSidebarOpen);
   const setQuickAddOpen = useUi((s) => s.setQuickAddOpen);
   const { data: session } = useSession();
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border/60 bg-background/70 px-4 backdrop-blur-xl lg:px-6">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="lg:hidden"
-        onClick={() => setSidebarOpen(true)}
-        aria-label="Open menu"
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
+      {/* Compact brand mark on mobile (sidebar is hidden there). */}
+      <Link href="/" className="flex items-center gap-2 lg:hidden" aria-label="Life Wishlist home">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[linear-gradient(120deg,hsl(var(--primary)),hsl(189_94%_45%))] text-white">
+          <Sparkles className="h-4 w-4" />
+        </span>
+      </Link>
 
       <button
         onClick={() => setCommandOpen(true)}
@@ -39,21 +35,14 @@ export function Topbar() {
 
       <div className="ml-auto flex items-center gap-1.5">
         {session?.isAuthenticated && (
-          <>
-            <Button
-              variant="gradient"
-              size="sm"
-              className="hidden sm:inline-flex"
-              onClick={() => setQuickAddOpen(true)}
-            >
-              <Plus className="h-4 w-4" /> Quick Add
-            </Button>
-            <Button asChild variant="gradient" size="icon" className="sm:hidden">
-              <Link href="/items/new" aria-label="Add item">
-                <Plus className="h-4 w-4" />
-              </Link>
-            </Button>
-          </>
+          <Button
+            variant="gradient"
+            size="sm"
+            className="hidden sm:inline-flex"
+            onClick={() => setQuickAddOpen(true)}
+          >
+            <Plus className="h-4 w-4" /> Quick Add
+          </Button>
         )}
         <ThemeToggle />
         <AdminMenu />

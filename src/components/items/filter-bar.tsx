@@ -80,8 +80,8 @@ export function FilterBar() {
 
   return (
     <div className="mb-5 space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[200px] flex-1">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative w-full sm:min-w-[200px] sm:flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={localQ}
@@ -91,6 +91,7 @@ export function FilterBar() {
           />
         </div>
 
+        <div className="flex flex-wrap items-center gap-2">
         <Select value={filters.categoryId ?? "all"} onValueChange={(v) => setFilters({ categoryId: v === "all" ? undefined : v })}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="Category" />
@@ -196,9 +197,10 @@ export function FilterBar() {
             <X className="h-4 w-4" /> Clear
           </Button>
         )}
+        </div>
       </div>
 
-      <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card/40 p-1 w-fit">
+      <div className="flex items-center gap-1 overflow-x-auto rounded-lg border border-border/60 bg-card/40 p-1 no-scrollbar w-full sm:w-fit">
         {VIEWS.map((v) => (
           <button
             key={v.value}
