@@ -38,16 +38,25 @@ const PALETTE = [
 
 type Datum = { name: string; value: number; color?: string };
 
+// CSS variables don't resolve inside SVG presentation attributes, so axis text
+// uses `currentColor` and each chart wrapper sets that colour via a real CSS class.
+const AXIS_WRAP = "text-muted-foreground";
+const TICK = { fontSize: 11, fill: "currentColor" as const };
+const GRID = "currentColor";
+
 function TooltipBox({ active, payload, label, formatter }: any) {
   if (!active || !payload?.length) return null;
+  // Prefer the datum's own `name` (bar/pie/treemap) and fall back to the axis
+  // label (time-series). This avoids Recharts ever showing a bare row index.
+  const title = payload[0]?.payload?.name ?? label;
   return (
     <div className="glass-strong rounded-lg px-3 py-2 text-xs shadow-lg">
-      {label && <p className="mb-1 font-medium">{label}</p>}
+      {title != null && title !== "" && <p className="mb-1 font-medium text-foreground">{title}</p>}
       {payload.map((p: any, i: number) => (
         <p key={i} className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full" style={{ background: p.color || p.fill }} />
           <span className="text-muted-foreground">{p.name}:</span>
-          <span className="font-medium">{formatter ? formatter(p.value) : p.value}</span>
+          <span className="font-medium text-foreground">{formatter ? formatter(p.value) : p.value}</span>
         </p>
       ))}
     </div>
@@ -94,7 +103,7 @@ export function DonutChart({
 }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <ResponsiveContainer width="100%" height={height} className={AXIS_WRAP}>
       <PieChart>
         <Pie
           data={data}
@@ -146,21 +155,34 @@ export function BarChartComp({
   horizontal?: boolean;
 }) {
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} layout={horizontal ? "vertical" : "horizontal"} margin={{ left: horizontal ? 20 : 0, right: 8 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} vertical={!horizontal} horizontal={horizontal} />
+    <ResponsiveContainer width="100%" height={height} className={AXIS_WRAP}>
+      <BarChart
+        data={data}
+        layout={horizontal ? "vertical" : "horizontal"}
+        margin={{ left: horizontal ? 12 : 0, right: 12, top: 8, bottom: horizontal ? 4 : 24 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" stroke={GRID} strokeOpacity={0.15} vertical={horizontal} horizontal={!horizontal} />
         {horizontal ? (
           <>
-            <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-            <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+            <XAxis type="number" tick={TICK} tickLine={false} axisLine={false} tickFormatter={(v) => (valueFormatter ? valueFormatter(v) : v)} />
+            <YAxis type="category" dataKey="name" width={110} tick={TICK} tickLine={false} axisLine={false} />
           </>
         ) : (
           <>
-            <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-            <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} width={40} />
+            <XAxis
+              dataKey="name"
+              tick={TICK}
+              tickLine={false}
+              axisLine={false}
+              interval={0}
+              angle={-30}
+              textAnchor="end"
+              height={56}
+            />
+            <YAxis tick={TICK} tickLine={false} axisLine={false} width={44} />
           </>
         )}
-        <Tooltip cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }} content={<TooltipBox formatter={valueFormatter} />} />
+        <Tooltip cursor={{ fill: "currentColor", opacity: 0.06 }} content={<TooltipBox formatter={valueFormatter} />} />
         <Bar dataKey="value" radius={horizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]} maxBarSize={48}>
           {data.map((d, i) => (
             <Cell key={i} fill={d.color || color} />
@@ -183,8 +205,8 @@ export function AreaChartComp({
   valueFormatter?: (v: number) => string;
 }) {
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ left: 0, right: 8, top: 6 }}>
+    <ResponsiveContainer width="100%" height={height} className={AXIS_WRAP}>
+      <AreaChart data={data} margin={{ left: 0, right: 12, top: 6 }}>
         <defs>
           {keys.map((k) => (
             <linearGradient key={k.key} id={`grad-${k.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -193,10 +215,11 @@ export function AreaChartComp({
             </linearGradient>
           ))}
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} vertical={false} />
-        <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} width={40} />
+        <CartesianGrid strokeDasharray="3 3" stroke={GRID} strokeOpacity={0.15} vertical={false} />
+        <XAxis dataKey="month" tick={TICK} tickLine={false} axisLine={false} />
+        <YAxis tick={TICK} tickLine={false} axisLine={false} width={44} />
         <Tooltip content={<TooltipBox formatter={valueFormatter} />} />
+        <Legend verticalAlign="top" height={28} iconType="circle" formatter={(v) => <span className="text-xs text-muted-foreground">{v}</span>} />
         {keys.map((k) => (
           <Area
             key={k.key}
@@ -206,6 +229,7 @@ export function AreaChartComp({
             stroke={k.color}
             strokeWidth={2}
             fill={`url(#grad-${k.key})`}
+            dot={{ r: 3, fill: k.color, strokeWidth: 0 }}
           />
         ))}
       </AreaChart>
@@ -223,14 +247,14 @@ export function LineChartComp({
   height?: number;
 }) {
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={data} margin={{ left: 0, right: 8, top: 6 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} vertical={false} />
-        <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} width={40} />
+    <ResponsiveContainer width="100%" height={height} className={AXIS_WRAP}>
+      <LineChart data={data} margin={{ left: 0, right: 12, top: 6 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={GRID} strokeOpacity={0.15} vertical={false} />
+        <XAxis dataKey="month" tick={TICK} tickLine={false} axisLine={false} />
+        <YAxis tick={TICK} tickLine={false} axisLine={false} width={44} />
         <Tooltip content={<TooltipBox />} />
         {keys.map((k) => (
-          <Line key={k.key} type="monotone" dataKey={k.key} name={k.label} stroke={k.color} strokeWidth={2} dot={false} />
+          <Line key={k.key} type="monotone" dataKey={k.key} name={k.label} stroke={k.color} strokeWidth={2} dot={{ r: 3, fill: k.color, strokeWidth: 0 }} />
         ))}
       </LineChart>
     </ResponsiveContainer>
@@ -249,12 +273,7 @@ export function TreemapChart({
   const treeData = data.map((d, i) => ({ ...d, fill: d.color || PALETTE[i % PALETTE.length] }));
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <Treemap
-        data={treeData}
-        dataKey="value"
-        stroke="hsl(var(--background))"
-        content={<TreemapCell />}
-      >
+      <Treemap data={treeData} dataKey="value" stroke="hsl(var(--background))" content={<TreemapCell />}>
         <Tooltip content={<TooltipBox formatter={valueFormatter} />} />
       </Treemap>
     </ResponsiveContainer>
@@ -266,9 +285,9 @@ function TreemapCell(props: any) {
   if (width < 4 || height < 4) return null;
   return (
     <g>
-      <rect x={x} y={y} width={width} height={height} rx={6} fill={fill} fillOpacity={0.85} />
-      {width > 60 && height > 28 && (
-        <text x={x + 8} y={y + 20} className="fill-white text-xs font-medium" fontSize={12}>
+      <rect x={x} y={y} width={width} height={height} rx={6} fill={fill} fillOpacity={0.9} />
+      {width > 54 && height > 24 && (
+        <text x={x + 8} y={y + 18} fill="#fff" fontSize={12} fontWeight={600}>
           {name}
         </text>
       )}
