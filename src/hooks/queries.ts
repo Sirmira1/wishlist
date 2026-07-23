@@ -177,6 +177,18 @@ export function useCreateBudget() {
   });
 }
 
+export function useUpdateBudget() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Record<string, unknown> }) =>
+      api.patch<Budget>(`/api/budgets/${id}`, patch),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["budgets"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
+    },
+  });
+}
+
 export function useDeleteBudget() {
   const qc = useQueryClient();
   return useMutation({

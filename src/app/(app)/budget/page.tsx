@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Wallet, Plus, Trash2, Target, CalendarClock, TrendingUp, PiggyBank } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Wallet, Plus, Trash2, Pencil, Target, CalendarClock, TrendingUp, PiggyBank, Info } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
@@ -16,7 +16,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useStats, useBudgets, useCreateBudget, useDeleteBudget, useCategories, useCollections, useSession } from "@/hooks/queries";
+import { useStats, useBudgets, useCreateBudget, useUpdateBudget, useDeleteBudget, useCategories, useCollections, useSession } from "@/hooks/queries";
+import type { Budget } from "@/types";
 import { api } from "@/lib/api-client";
 import { formatCurrency, pct } from "@/lib/utils";
 import { useSettingsCurrency } from "@/hooks/use-currency";
@@ -106,6 +107,59 @@ function CreateBudgetDialog() {
   );
 }
 
+function EditBudgetDialog({ budget }: { budget: Budget }) {
+  const update = useUpdateBudget();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(budget.name);
+  const [amount, setAmount] = useState(String(budget.amount));
+  const [period, setPeriod] = useState(budget.period);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon-sm" aria-label="Edit budget">
+          <Pencil className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Edit budget</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5"><Label>Amount</Label><Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
+            <div className="space-y-1.5">
+              <Label>Period</Label>
+              <Select value={period} onValueChange={setPeriod}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MONTHLY">Monthly</SelectItem>
+                  <SelectItem value="YEARLY">Yearly</SelectItem>
+                  <SelectItem value="TOTAL">Total</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button
+            variant="gradient"
+            disabled={update.isPending || !name.trim() || !amount}
+            onClick={() =>
+              update.mutate(
+                { id: budget.id, patch: { name, amount, period } },
+                { onSuccess: () => { toast.success("Budget updated"); setOpen(false); }, onError: (e) => toast.error((e as Error).message) }
+              )
+            }
+          >
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function BudgetPage() {
   const { data: stats, isLoading } = useStats();
   const { data: budgets } = useBudgets();
@@ -115,9 +169,27 @@ export default function BudgetPage() {
   const qc = useQueryClient();
   const fc = (v: number) => formatCurrency(v, currency);
 
+  // Current saved savings goal (for prefilling the targets form).
+  const { data: settingsData } = useQuery<{ savingsGoal?: number | null }>({
+    queryKey: ["settings", "budget"],
+    queryFn: () => api.get("/api/settings"),
+  });
+
   const [monthly, setMonthly] = useState("");
   const [yearly, setYearly] = useState("");
   const [savings, setSavings] = useState("");
+  const [targetsReady, setTargetsReady] = useState(false);
+
+  // Prefill the target inputs with the currently-saved values (once).
+  useEffect(() => {
+    if (targetsReady || !stats) return;
+    setMonthly(stats.prediction.monthlyBudget != null ? String(stats.prediction.monthlyBudget) : "");
+    setYearly(stats.prediction.yearlyBudget != null ? String(stats.prediction.yearlyBudget) : "");
+    setTargetsReady(true);
+  }, [stats, targetsReady]);
+  useEffect(() => {
+    if (settingsData?.savingsGoal != null) setSavings(String(settingsData.savingsGoal));
+  }, [settingsData?.savingsGoal]);
 
   async function saveTargets() {
     await api.patch("/api/settings", {
@@ -127,7 +199,6 @@ export default function BudgetPage() {
     });
     await qc.invalidateQueries();
     toast.success("Targets updated");
-    setMonthly(""); setYearly(""); setSavings("");
   }
 
   if (isLoading || !stats) {
@@ -203,13 +274,18 @@ export default function BudgetPage() {
       {/* Edit targets (admin) */}
       {session?.isAdmin && (
         <Card className="p-6">
-          <h3 className="mb-3 font-semibold">Set targets</h3>
+          <h3 className="font-semibold">Set targets</h3>
+          <p className="mb-4 mt-1 flex items-start gap-1.5 text-xs text-muted-foreground">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            These drive your dashboard budget bar and the completion forecast. The fields below show your current
+            values — edit any of them and hit Save. “Spent this month” counts items you mark as acquired with a date this month.
+          </p>
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-1.5"><Label>Monthly budget</Label><Input type="number" placeholder={p.monthlyBudget?.toString() ?? "e.g. 500"} value={monthly} onChange={(e) => setMonthly(e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Yearly budget</Label><Input type="number" placeholder={p.yearlyBudget?.toString() ?? "e.g. 6000"} value={yearly} onChange={(e) => setYearly(e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Savings goal</Label><Input type="number" value={savings} onChange={(e) => setSavings(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Monthly budget ({currency})</Label><Input type="number" placeholder="e.g. 500" value={monthly} onChange={(e) => setMonthly(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Yearly budget ({currency})</Label><Input type="number" placeholder="e.g. 6000" value={yearly} onChange={(e) => setYearly(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Savings goal ({currency})</Label><Input type="number" placeholder="e.g. 10000" value={savings} onChange={(e) => setSavings(e.target.value)} /></div>
           </div>
-          <Button variant="outline" className="mt-4" onClick={saveTargets}>Save targets</Button>
+          <Button variant="gradient" className="mt-4" onClick={saveTargets}>Save targets</Button>
         </Card>
       )}
 
@@ -236,9 +312,12 @@ export default function BudgetPage() {
                       </p>
                     </div>
                     {session?.isAdmin && (
-                      <Button variant="ghost" size="icon-sm" onClick={() => del.mutate(b.id, { onSuccess: () => toast.success("Budget removed") })}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center">
+                        <EditBudgetDialog budget={b} />
+                        <Button variant="ghost" size="icon-sm" onClick={() => del.mutate(b.id, { onSuccess: () => toast.success("Budget removed") })}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                   <div className="mt-3 space-y-1.5">
