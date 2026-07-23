@@ -35,6 +35,7 @@ import { ChartCard, LineChartComp } from "@/components/charts";
 import { SimpleMarkdown } from "@/components/simple-markdown";
 import { useItem, useSession, useAddPricePoint } from "@/hooks/queries";
 import { formatCurrency, formatDate, totalItemCost, effectivePrice, potentialSavings } from "@/lib/utils";
+import { vehicleTypeLabel } from "@/lib/constants";
 import { useSettingsCurrency } from "@/hooks/use-currency";
 import { toast } from "sonner";
 
@@ -235,7 +236,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
           <h3 className="mb-3 flex items-center gap-2 font-semibold"><Car className="h-4 w-4" /> Vehicle details</h3>
           <div className="grid gap-x-6 sm:grid-cols-3">
             <div className="divide-y divide-border/50">
-              <Row label="Type" value={item.vehicle.vehicleType} />
+              <Row label="Type" value={vehicleTypeLabel(item.vehicle.vehicleType)} />
               <Row label="Make" value={item.vehicle.make} />
               <Row label="Model" value={item.vehicle.model} />
             </div>

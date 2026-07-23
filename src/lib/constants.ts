@@ -109,8 +109,30 @@ export const PC_PART_TYPES = [
 
 export const VEHICLE_TYPES = [
   { value: "CAR", label: "Car" },
+  { value: "TRUCK", label: "Truck" },
+  { value: "SUV", label: "SUV" },
+  { value: "VAN", label: "Van" },
+  { value: "EV", label: "Electric Vehicle" },
   { value: "MOTORCYCLE", label: "Motorcycle" },
+  { value: "DIRT_BIKE", label: "Dirt Bike" },
+  { value: "ATV", label: "ATV / Quad" },
+  { value: "SNOWMOBILE", label: "Snowmobile" },
+  { value: "BOAT", label: "Boat" },
+  { value: "SPEEDBOAT", label: "Speedboat" },
+  { value: "YACHT", label: "Yacht" },
+  { value: "JET_SKI", label: "Jet Ski" },
+  { value: "RV", label: "RV / Camper" },
+  { value: "SCOOTER", label: "Scooter" },
+  { value: "GO_KART", label: "Go-Kart" },
+  { value: "BICYCLE", label: "Bicycle" },
+  { value: "OTHER", label: "Other" },
 ];
+
+// Map a stored vehicleType value → friendly label (falls back to the raw value).
+export function vehicleTypeLabel(value?: string | null): string {
+  if (!value) return "Vehicle";
+  return VEHICLE_TYPES.find((v) => v.value === value)?.label ?? value;
+}
 
 // Default categories seeded on first run. `icon` is a lucide-react icon name.
 export const DEFAULT_CATEGORIES: {
