@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -19,6 +20,7 @@ import { ChartCard, DonutChart, BarChartComp, AreaChartComp } from "@/components
 import { ActivityFeed } from "@/components/activity-feed";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, PriorityBadge } from "@/components/badges";
@@ -27,6 +29,7 @@ import { formatCurrency, formatCompact, formatCurrencyCompact } from "@/lib/util
 
 export default function DashboardPage() {
   const { data: stats, isLoading } = useStats();
+  const [useLogScale, setUseLogScale] = useState(false);
   const { data: session } = useSession();
   const currency = stats?.currency ?? "USD";
 
@@ -149,10 +152,18 @@ export default function DashboardPage() {
       )}
 
       {/* Charts */}
+      <div className="mb-3 flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="w-full sm:w-auto" />
+        <label className="flex items-center gap-2 rounded-full border border-border/70 bg-background/60 px-3 py-2 text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+          <Switch checked={useLogScale} onCheckedChange={setUseLogScale} />
+          <span>Log scale</span>
+        </label>
+      </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <ChartCard title="Cost by Category" description="Where the value lives" className="lg:col-span-1">
           {stats.byCategory.length ? (
             <DonutChart
+              scale={useLogScale ? "log" : "linear"}
               data={stats.byCategory.slice(0, 8).map((c) => ({ name: c.name, value: Math.round(c.value), color: c.color }))}
               valueFormatter={(v) => formatCurrency(v, currency)}
               centerFormatter={(v) => formatCurrencyCompact(v, currency)}

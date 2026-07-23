@@ -93,6 +93,7 @@ export default function AnalyticsPage() {
         <ChartCard title="Wishlist Growth" description="Cumulative items over time" className="lg:col-span-2">
           {stats.growthOverTime.length ? (
             <AreaChartComp
+              scale={useLogScale ? "log" : "linear"}
               data={stats.growthOverTime}
               keys={[
                 { key: "cumulative", label: "Total items", color: "#8b5cf6" },

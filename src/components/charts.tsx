@@ -99,6 +99,7 @@ export function DonutChart({
   valueFormatter,
   centerFormatter,
   innerRadius = 60,
+  scale = "linear",
 }: {
   data: Datum[];
   height?: number;
@@ -106,7 +107,13 @@ export function DonutChart({
   /** Short form for the centre label — falls back to valueFormatter. */
   centerFormatter?: (v: number) => string;
   innerRadius?: number;
+  scale?: "linear" | "log";
 }) {
+  const chartData = data.map((d) => ({
+    ...d,
+    originalValue: d.value,
+    value: scale === "log" && d.value > 0 ? Math.log10(d.value + 1) : d.value,
+  }));
   const total = data.reduce((s, d) => s + d.value, 0);
   const centerText = String(
     (centerFormatter ?? valueFormatter)?.(total) ?? total
@@ -118,7 +125,7 @@ export function DonutChart({
     <ResponsiveContainer width="100%" height={height} className={AXIS_WRAP}>
       <PieChart>
         <Pie
-          data={data}
+          data={chartData}
           dataKey="value"
           nameKey="name"
           innerRadius={innerRadius}
@@ -126,7 +133,7 @@ export function DonutChart({
           paddingAngle={2}
           strokeWidth={0}
         >
-          {data.map((d, i) => (
+          {chartData.map((d, i) => (
             <Cell key={i} fill={d.color || PALETTE[i % PALETTE.length]} />
           ))}
         </Pie>
@@ -228,15 +235,29 @@ export function AreaChartComp({
   keys,
   height = 260,
   valueFormatter,
+  scale = "linear",
 }: {
   data: Record<string, number | string>[];
   keys: { key: string; label: string; color: string }[];
   height?: number;
   valueFormatter?: (v: number) => string;
+  scale?: "linear" | "log";
 }) {
+  const chartData = data.map((d) => ({
+    ...d,
+    ...keys.reduce((acc, k) => {
+      const value = d[k.key] as number;
+      return {
+        ...acc,
+        [k.key]: scale === "log" && typeof value === "number" && value > 0 ? Math.log10(value + 1) : value,
+        [`${k.key}_original`]: value,
+      };
+    }, {}),
+  }));
+
   return (
     <ResponsiveContainer width="100%" height={height} className={AXIS_WRAP}>
-      <AreaChart data={data} margin={{ left: 0, right: 12, top: 6 }}>
+      <AreaChart data={chartData} margin={{ left: 0, right: 12, top: 6 }}>
         <defs>
           {keys.map((k) => (
             <linearGradient key={k.key} id={`grad-${k.key}`} x1="0" y1="0" x2="0" y2="1">
