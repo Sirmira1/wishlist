@@ -2,10 +2,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const rate = 1.36;
-const round = (value: number | null | undefined) => {
-  if (value == null) return value;
-  return Math.round(value * rate * 100) / 100;
-};
+const round = (value: number): number => Math.round(value * rate * 100) / 100;
 
 async function main() {
   const settings = await prisma.settings.findUnique({ where: { id: "singleton" } });
@@ -52,7 +49,7 @@ async function main() {
     for (const history of item.priceHistory) {
       await prisma.priceHistory.update({
         where: { id: history.id },
-        data: { price: round(history.price) ?? history.price },
+        data: { price: round(history.price) },
       });
     }
   }
@@ -80,7 +77,7 @@ async function main() {
   for (const budget of budgets) {
     await prisma.budget.update({
       where: { id: budget.id },
-      data: { amount: round(budget.amount) ?? budget.amount },
+      data: { amount: round(budget.amount) },
     });
     budgetUpdated++;
   }
@@ -91,7 +88,7 @@ async function main() {
     if (typeof collection.targetBudget === "number") {
       await prisma.collection.update({
         where: { id: collection.id },
-        data: { targetBudget: round(collection.targetBudget) ?? collection.targetBudget },
+        data: { targetBudget: round(collection.targetBudget) },
       });
       collectionUpdated++;
     }
