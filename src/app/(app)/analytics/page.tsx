@@ -13,12 +13,13 @@ import {
   TreemapChart,
 } from "@/components/charts";
 import { useStats } from "@/hooks/queries";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatCurrencyCompact } from "@/lib/utils";
 
 export default function AnalyticsPage() {
   const { data: stats, isLoading } = useStats();
   const currency = stats?.currency ?? "USD";
   const fc = (v: number) => formatCurrency(v, currency);
+  const fcc = (v: number) => formatCurrencyCompact(v, currency);
 
   if (isLoading || !stats) {
     return (
@@ -47,7 +48,7 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard title="Cost by Category" description="Distribution of value across categories">
           {stats.byCategory.length ? (
-            <DonutChart data={stats.byCategory.slice(0, 9).map((c) => ({ name: c.name, value: Math.round(c.value), color: c.color }))} valueFormatter={fc} />
+            <DonutChart data={stats.byCategory.slice(0, 9).map((c) => ({ name: c.name, value: Math.round(c.value), color: c.color }))} valueFormatter={fc} centerFormatter={fcc} />
           ) : <Empty />}
         </ChartCard>
 

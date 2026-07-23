@@ -72,6 +72,26 @@ export function formatCompact(value: number | null | undefined): string {
   return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(n);
 }
 
+/**
+ * Short currency for tight spaces (chart centres, stat tiles): CA$500.2M.
+ * Below 10k the exact value still fits, so keep it readable there.
+ */
+export function formatCurrencyCompact(value: number | null | undefined, currency = "USD"): string {
+  const n = value ?? 0;
+  if (Math.abs(n) < 10_000) return formatCurrency(n, currency);
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      notation: "compact",
+      maximumFractionDigits: 1,
+    }).format(n);
+  } catch {
+    const sym = CURRENCY_SYMBOLS[currency] ?? "";
+    return `${sym}${formatCompact(n)}`;
+  }
+}
+
 export function slugify(input: string): string {
   return input
     .toLowerCase()

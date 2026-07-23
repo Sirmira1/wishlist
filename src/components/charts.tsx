@@ -94,14 +94,23 @@ export function DonutChart({
   data,
   height = 260,
   valueFormatter,
+  centerFormatter,
   innerRadius = 60,
 }: {
   data: Datum[];
   height?: number;
   valueFormatter?: (v: number) => string;
+  /** Short form for the centre label — falls back to valueFormatter. */
+  centerFormatter?: (v: number) => string;
   innerRadius?: number;
 }) {
   const total = data.reduce((s, d) => s + d.value, 0);
+  const centerText = String(
+    (centerFormatter ?? valueFormatter)?.(total) ?? total
+  );
+  // Scale the centre label down so long totals still fit inside the hole.
+  const centerSize =
+    centerText.length <= 8 ? 18 : centerText.length <= 11 ? 15 : centerText.length <= 14 ? 13 : 11;
   return (
     <ResponsiveContainer width="100%" height={height} className={AXIS_WRAP}>
       <PieChart>
@@ -131,9 +140,11 @@ export function DonutChart({
             y="42%"
             textAnchor="middle"
             dominantBaseline="middle"
-            className="fill-foreground text-lg font-bold"
+            fontSize={centerSize}
+            fontWeight={700}
+            className="fill-foreground"
           >
-            {valueFormatter ? valueFormatter(total) : total}
+            {centerText}
           </text>
         )}
       </PieChart>

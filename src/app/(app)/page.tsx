@@ -23,7 +23,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, PriorityBadge } from "@/components/badges";
 import { useStats, useSession } from "@/hooks/queries";
-import { formatCurrency, formatCompact } from "@/lib/utils";
+import { formatCurrency, formatCompact, formatCurrencyCompact } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { data: stats, isLoading } = useStats();
@@ -155,6 +155,7 @@ export default function DashboardPage() {
             <DonutChart
               data={stats.byCategory.slice(0, 8).map((c) => ({ name: c.name, value: Math.round(c.value), color: c.color }))}
               valueFormatter={(v) => formatCurrency(v, currency)}
+              centerFormatter={(v) => formatCurrencyCompact(v, currency)}
             />
           ) : (
             <p className="py-10 text-center text-sm text-muted-foreground">No data yet</p>
