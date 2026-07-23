@@ -19,7 +19,7 @@ type ActivityType =
 export async function logActivity(
   type: ActivityType,
   message: string,
-  opts: { itemId?: string; itemTitle?: string; meta?: Record<string, unknown> } = {}
+  opts: { itemId?: string; itemTitle?: string; userId?: string; meta?: Record<string, unknown> } = {}
 ) {
   try {
     await prisma.activity.create({
@@ -28,6 +28,7 @@ export async function logActivity(
         message,
         itemId: opts.itemId,
         itemTitle: opts.itemTitle,
+        userId: opts.userId,
         meta: opts.meta as object | undefined,
       },
     });

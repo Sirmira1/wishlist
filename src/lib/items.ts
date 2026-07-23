@@ -8,6 +8,7 @@ import type { z } from "zod";
 
 export const itemInclude = {
   category: true,
+  user: { select: { id: true, username: true, displayName: true } },
   collections: { select: { id: true, name: true, slug: true, color: true, icon: true } },
   rooms: { select: { id: true, name: true, slug: true, color: true, icon: true } },
   vehicle: true,
@@ -61,7 +62,7 @@ function toScalarData(input: ParsedInput) {
   };
 }
 
-export async function createItem(input: ParsedInput): Promise<ItemWithRelations> {
+export async function createItem(input: ParsedInput, ownerId: string): Promise<ItemWithRelations> {
   const scalar = toScalarData(input);
   const acquiredNow = ACQUIRED_STATUSES.has(input.status) && !input.dateAcquired;
 
@@ -70,6 +71,7 @@ export async function createItem(input: ParsedInput): Promise<ItemWithRelations>
       ...scalar,
       slug: uniqueSlug(input.title),
       dateAcquired: acquiredNow ? new Date() : scalar.dateAcquired,
+      user: { connect: { id: ownerId } },
       category: input.categoryId ? { connect: { id: input.categoryId } } : undefined,
       collections: input.collectionIds?.length
         ? { connect: input.collectionIds.map((id) => ({ id })) }
@@ -104,11 +106,13 @@ export async function createItem(input: ParsedInput): Promise<ItemWithRelations>
   await logActivity("ITEM_ADDED", `Added “${item.title}” to the wishlist`, {
     itemId: item.id,
     itemTitle: item.title,
+    userId: ownerId,
   });
   if (ACQUIRED_STATUSES.has(item.status)) {
     await logActivity("ITEM_ACQUIRED", `Acquired “${item.title}” 🎉`, {
       itemId: item.id,
       itemTitle: item.title,
+      userId: ownerId,
     });
   }
   return item;
@@ -179,14 +183,17 @@ export async function updateItem(id: string, input: ParsedInput): Promise<ItemWi
     await prisma.vehicle.deleteMany({ where: { itemId: id } });
   }
 
+  const owner = existing.userId ?? undefined;
   await logActivity("ITEM_UPDATED", `Updated “${item.title}”`, {
     itemId: item.id,
     itemTitle: item.title,
+    userId: owner,
   });
   if (statusChanged) {
     await logActivity("STATUS_CHANGED", `“${item.title}” → ${statusMeta(item.status).label}`, {
       itemId: item.id,
       itemTitle: item.title,
+      userId: owner,
       meta: { from: existing.status, to: item.status },
     });
   }
@@ -194,12 +201,14 @@ export async function updateItem(id: string, input: ParsedInput): Promise<ItemWi
     await logActivity("ITEM_ACQUIRED", `Acquired “${item.title}” 🎉`, {
       itemId: item.id,
       itemTitle: item.title,
+      userId: owner,
     });
   }
   if (priceChanged) {
     await logActivity("PRICE_UPDATED", `Price of “${item.title}” updated`, {
       itemId: item.id,
       itemTitle: item.title,
+      userId: owner,
       meta: { from: existing.currentPrice, to: scalar.currentPrice },
     });
   }

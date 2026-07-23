@@ -51,7 +51,8 @@ export function CommandPalette() {
 
   const { data } = useQuery({
     queryKey: ["command-search", query],
-    queryFn: () => api.get<ItemsResponse>(`/api/items?q=${encodeURIComponent(query)}&pageSize=8`),
+    queryFn: () =>
+      api.get<ItemsResponse>(`/api/items?q=${encodeURIComponent(query)}&pageSize=8&allUsers=true`),
     enabled: open && query.length > 0,
   });
 
@@ -91,7 +92,7 @@ export function CommandPalette() {
               </CommandGroup>
             )}
 
-            {session?.isAdmin && (
+            {session?.isAuthenticated && (
               <CommandGroup heading="Actions">
                 <CommandItem value="new-item" onSelect={() => go("/items/new")}>
                   <Plus className="h-4 w-4" /> Add new item

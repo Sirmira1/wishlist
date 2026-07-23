@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { handle, ok, fail } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
+import { requireEdit } from "@/lib/auth";
 import { itemInclude } from "@/lib/items";
 import { logActivity } from "@/lib/activity";
 import { ACQUIRED_STATUSES, statusMeta } from "@/lib/constants";
@@ -16,11 +16,11 @@ const quickSchema = z.object({
 
 // Lightweight partial update for card quick-actions (toggle favorite/pin/status).
 export const PATCH = handle(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
-  await requireAdmin();
   const { id } = await params;
-  const patch = quickSchema.parse(await req.json());
   const existing = await prisma.item.findUnique({ where: { id } });
   if (!existing) return fail("Item not found", 404);
+  await requireEdit(existing.userId);
+  const patch = quickSchema.parse(await req.json());
 
   const nowAcquired =
     patch.status != null &&
@@ -40,12 +40,14 @@ export const PATCH = handle(async (req: Request, { params }: { params: Promise<{
     await logActivity("STATUS_CHANGED", `“${item.title}” → ${statusMeta(item.status).label}`, {
       itemId: item.id,
       itemTitle: item.title,
+      userId: existing.userId ?? undefined,
       meta: { from: existing.status, to: item.status },
     });
     if (nowAcquired) {
       await logActivity("ITEM_ACQUIRED", `Acquired “${item.title}” 🎉`, {
         itemId: item.id,
         itemTitle: item.title,
+        userId: existing.userId ?? undefined,
       });
     }
   }

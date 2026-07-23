@@ -30,7 +30,7 @@ export default function VehiclesPage() {
   return (
     <div>
       <PageHeader title="Vehicles" description="Track your dream cars and motorcycles with the details that matter." icon={Car}>
-        {session?.isAdmin && (
+        {session?.isAuthenticated && (
           <Button asChild variant="gradient"><Link href="/items/new"><Plus className="h-4 w-4" /> Add Vehicle</Link></Button>
         )}
       </PageHeader>

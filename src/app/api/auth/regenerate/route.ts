@@ -1,17 +1,18 @@
-import { handle, ok } from "@/lib/api";
+import { handle, ok, fail } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, getSettings, createSession } from "@/lib/auth";
+import { requireUser, createSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-// Regenerate session tokens: invalidate every session, keep the current admin signed in.
+// Regenerate session tokens: invalidate this account's other sessions, keep this one.
 export const POST = handle(async () => {
-  await requireAdmin();
-  const settings = await getSettings();
-  const updated = await prisma.settings.update({
-    where: { id: settings.id },
+  const session = await requireUser();
+  const user = await prisma.user.update({
+    where: { id: session.userId },
     data: { tokenVersion: { increment: 1 } },
+    select: { id: true, tokenVersion: true, role: true },
   });
-  await createSession(updated.adminUsername, updated.tokenVersion, updated.autoLogoutMinutes);
-  return ok({ success: true, tokenVersion: updated.tokenVersion });
+  if (!user) return fail("User not found.", 404);
+  await createSession(user);
+  return ok({ success: true });
 });

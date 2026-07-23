@@ -54,7 +54,8 @@ const restoreSchema = z.object({
 
 // Restore from a backup file. `wipe: true` replaces existing data.
 export const POST = handle(async (req: Request) => {
-  await requireAdmin();
+  const session = await requireAdmin();
+  const ownerId = session.userId;
   const data = restoreSchema.parse(await req.json());
 
   if (data.wipe) {
@@ -101,6 +102,7 @@ export const POST = handle(async (req: Request) => {
         color: c.color ?? null,
         coverImage: c.coverImage ?? null,
         targetBudget: c.targetBudget ?? null,
+        userId: ownerId,
       },
     });
     colIdMap.set(c.id, created.id);
@@ -116,6 +118,7 @@ export const POST = handle(async (req: Request) => {
         color: r.color ?? null,
         description: r.description ?? null,
         imageUrl: r.imageUrl ?? null,
+        userId: ownerId,
       },
     });
     roomIdMap.set(r.id, created.id);
@@ -161,6 +164,7 @@ export const POST = handle(async (req: Request) => {
         pcPartType: i.pcPartType ?? null,
         customFields: i.customFields ?? undefined,
         categoryId: i.categoryId ? catIdMap.get(i.categoryId) ?? null : null,
+        userId: ownerId,
         collections: collectionIds.length ? { connect: collectionIds.map((id: string) => ({ id })) } : undefined,
         rooms: roomIds.length ? { connect: roomIds.map((id: string) => ({ id })) } : undefined,
         vehicle: i.vehicle

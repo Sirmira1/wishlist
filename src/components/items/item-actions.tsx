@@ -30,7 +30,11 @@ export function ItemActions({ item, size = "icon-sm" }: { item: Item; size?: "ic
   const del = useDeleteItem();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  if (!session?.isAdmin) {
+  const canEdit =
+    session?.isAdmin || (session?.userId != null && item.user?.id === session.userId);
+
+  // Signed-out visitors just get the external link (if any).
+  if (!session?.isAuthenticated) {
     return item.url ? (
       <Button asChild variant="ghost" size={size} aria-label="Open link">
         <a href={item.url} target="_blank" rel="noopener noreferrer">
@@ -38,6 +42,33 @@ export function ItemActions({ item, size = "icon-sm" }: { item: Item; size?: "ic
         </a>
       </Button>
     ) : null;
+  }
+
+  // Signed in but not the owner → offer to fork it into your own wishlist.
+  if (!canEdit) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size={size} aria-label="Item actions" onClick={(e) => e.preventDefault()}>
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem
+            onClick={() => duplicate.mutate(item.id, { onSuccess: () => toast.success("Added to your wishlist") })}
+          >
+            <Copy /> Add to my wishlist
+          </DropdownMenuItem>
+          {item.url && (
+            <DropdownMenuItem asChild>
+              <a href={item.url} target="_blank" rel="noopener noreferrer">
+                <ExternalLink /> Open link
+              </a>
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
   }
 
   return (

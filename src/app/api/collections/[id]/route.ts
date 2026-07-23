@@ -1,6 +1,6 @@
 import { handle, ok, fail } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { canView, requireAdmin } from "@/lib/auth";
+import { canView, requireEdit } from "@/lib/auth";
 import { collectionSchema } from "@/lib/validations";
 import { itemInclude } from "@/lib/items";
 import { logActivity } from "@/lib/activity";
@@ -25,8 +25,10 @@ export const GET = handle(async (_req: Request, { params }: Ctx) => {
 });
 
 export const PATCH = handle(async (req: Request, { params }: Ctx) => {
-  await requireAdmin();
   const { id } = await params;
+  const existing = await prisma.collection.findUnique({ where: { id }, select: { userId: true } });
+  if (!existing) return fail("Collection not found", 404);
+  await requireEdit(existing.userId);
   const data = collectionSchema.partial().parse(await req.json());
   const collection = await prisma.collection.update({
     where: { id },
@@ -46,8 +48,10 @@ export const PATCH = handle(async (req: Request, { params }: Ctx) => {
 });
 
 export const DELETE = handle(async (_req: Request, { params }: Ctx) => {
-  await requireAdmin();
   const { id } = await params;
+  const existing = await prisma.collection.findUnique({ where: { id }, select: { userId: true } });
+  if (!existing) return fail("Collection not found", 404);
+  await requireEdit(existing.userId);
   await prisma.collection.delete({ where: { id } });
   return ok({ success: true });
 });

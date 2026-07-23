@@ -15,21 +15,30 @@ function monthKey(d: Date): string {
 
 export type Stats = Awaited<ReturnType<typeof computeStats>>;
 
-export async function computeStats() {
-  const [items, collectionsCount, roomsCount, categoriesCount, budgets, settings] =
+/** Compute stats for a single user's wishlist (or globally when ownerId is null). */
+export async function computeStats(ownerId: string | null) {
+  const ownerFilter = ownerId ? { userId: ownerId } : {};
+  const [items, collectionsCount, roomsCount, categoriesCount, budgets, settings, owner] =
     await Promise.all([
       prisma.item.findMany({
+        where: ownerFilter,
         include: {
           category: { select: { id: true, name: true, color: true } },
           collections: { select: { id: true, name: true, color: true } },
           rooms: { select: { id: true, name: true, color: true } },
         },
       }),
-      prisma.collection.count(),
-      prisma.room.count(),
+      prisma.collection.count({ where: ownerFilter }),
+      prisma.room.count({ where: ownerFilter }),
       prisma.category.count(),
-      prisma.budget.findMany(),
+      prisma.budget.findMany({ where: ownerFilter }),
       prisma.settings.findUnique({ where: { id: "singleton" } }),
+      ownerId
+        ? prisma.user.findUnique({
+            where: { id: ownerId },
+            select: { monthlyBudget: true, yearlyBudget: true, savingsGoal: true },
+          })
+        : Promise.resolve(null),
     ]);
 
   const active = items.filter((i) => !CLOSED_STATUSES.has(i.status));
@@ -180,8 +189,9 @@ export async function computeStats() {
     .filter(([m]) => m.startsWith(String(now.getFullYear())))
     .reduce((s, [, v]) => s + v, 0);
 
-  const monthlyBudget = settings?.monthlyBudget ?? null;
-  const yearlyBudget = settings?.yearlyBudget ?? null;
+  // Budget targets are per-user (fall back to legacy Settings values).
+  const monthlyBudget = owner?.monthlyBudget ?? settings?.monthlyBudget ?? null;
+  const yearlyBudget = owner?.yearlyBudget ?? settings?.yearlyBudget ?? null;
 
   // Average monthly spend across active months (fallback to monthly budget).
   const monthsWithSpend = [...spendByMonth.values()].filter((v) => v > 0);

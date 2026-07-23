@@ -77,7 +77,7 @@ export default function CollectionsPage() {
   return (
     <div>
       <PageHeader title="Collections" description="Group items into curated sets — builds, upgrades, dream setups." icon={FolderHeart}>
-        {session?.isAdmin && <CreateCollectionDialog />}
+        {session?.isAuthenticated && <CreateCollectionDialog />}
       </PageHeader>
 
       {isLoading ? (

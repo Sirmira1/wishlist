@@ -9,23 +9,19 @@ export const dynamic = "force-dynamic";
 export const GET = handle(async () => {
   const settings = await getSettings();
   const admin = await isAdmin();
-  // Never expose secrets. Non-admins get a trimmed, public-safe subset.
+  // App-wide, non-secret config. Safe for anyone to read.
   const publicView = {
     theme: settings.theme,
     accentColor: settings.accentColor,
     currency: settings.currency,
     publicViewing: settings.publicViewing,
-    monthlyBudget: settings.monthlyBudget,
-    yearlyBudget: settings.yearlyBudget,
-    savingsGoal: settings.savingsGoal,
-    savingsCurrent: settings.savingsCurrent,
+    allowRegistration: settings.allowRegistration,
   };
   if (!admin) return ok(publicView);
   return ok({
     ...publicView,
     adminUsername: settings.adminUsername,
     autoLogoutMinutes: settings.autoLogoutMinutes,
-    hasResetCode: Boolean(settings.resetCodeHash),
     isAdmin: true,
   });
 });
@@ -37,16 +33,12 @@ export const PATCH = handle(async (req: Request) => {
   const updated = await prisma.settings.update({
     where: { id: current.id },
     data: {
-      adminUsername: data.adminUsername ?? undefined,
       publicViewing: data.publicViewing ?? undefined,
+      allowRegistration: data.allowRegistration ?? undefined,
       autoLogoutMinutes: data.autoLogoutMinutes ?? undefined,
       theme: data.theme ?? undefined,
       accentColor: data.accentColor ?? undefined,
       currency: data.currency ?? undefined,
-      monthlyBudget: data.monthlyBudget ?? undefined,
-      yearlyBudget: data.yearlyBudget ?? undefined,
-      savingsGoal: data.savingsGoal ?? undefined,
-      savingsCurrent: data.savingsCurrent ?? undefined,
     },
   });
   await logActivity("SETTINGS_UPDATED", "Updated settings");

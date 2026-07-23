@@ -18,7 +18,7 @@ export function AutoLogout() {
   const lastRefresh = useRef(Date.now());
 
   useEffect(() => {
-    if (!session?.isAdmin) return;
+    if (!session?.isAuthenticated) return;
     const idleLimit = (session.autoLogoutMinutes || 30) * 60_000;
     // Renew at most this often while active — comfortably before the cookie expires.
     const refreshEvery = Math.max(60_000, Math.floor(idleLimit / 3));
@@ -54,7 +54,7 @@ export function AutoLogout() {
       clearInterval(tick);
       events.forEach((e) => window.removeEventListener(e, markActive));
     };
-  }, [session?.isAdmin, session?.autoLogoutMinutes, qc, router]);
+  }, [session?.isAuthenticated, session?.autoLogoutMinutes, qc, router]);
 
   return null;
 }

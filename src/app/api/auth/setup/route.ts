@@ -1,6 +1,6 @@
 import { handle, ok, fail } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { getSettings, hashPassword, isSetupComplete, createSession } from "@/lib/auth";
+import { hashPassword, isSetupComplete, createSession } from "@/lib/auth";
 import { setupSchema } from "@/lib/validations";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { DEFAULT_CATEGORIES } from "@/lib/constants";
@@ -43,14 +43,12 @@ export const POST = handle(async (req: Request) => {
   const { username, password } = setupSchema.parse(body);
 
   const passwordHash = await hashPassword(password);
-  const settings = await getSettings();
-  await prisma.settings.update({
-    where: { id: settings.id },
-    data: { adminUsername: username, passwordHash },
+  const admin = await prisma.user.create({
+    data: { username, displayName: username, passwordHash, role: "ADMIN" },
   });
 
   await seedDefaultCategories();
-  await createSession(username, settings.tokenVersion, settings.autoLogoutMinutes);
+  await createSession(admin);
 
   return ok({ success: true });
 });

@@ -10,10 +10,15 @@ export const GET = handle(async () => {
     getSettings(),
   ]);
   return ok({
-    isAdmin: Boolean(session),
+    isAuthenticated: Boolean(session),
+    isAdmin: session?.role === "ADMIN",
+    userId: session?.userId ?? null,
     username: session?.username ?? null,
+    displayName: session?.displayName ?? null,
+    role: session?.role ?? null,
     setupComplete: setup,
     publicViewing: settings.publicViewing,
+    allowRegistration: settings.allowRegistration,
     autoLogoutMinutes: settings.autoLogoutMinutes,
   });
 });

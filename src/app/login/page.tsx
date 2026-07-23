@@ -52,7 +52,7 @@ function LoginInner() {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.post("/api/auth/reset", { code, newPassword });
+      await api.post("/api/auth/reset", { username, code, newPassword });
       toast.success("Password reset — you can sign in now");
       setMode("login");
       setPassword("");
@@ -97,8 +97,12 @@ function LoginInner() {
         ) : (
           <form onSubmit={reset} className="space-y-4">
             <div className="space-y-1.5">
+              <Label>Username</Label>
+              <Input value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />
+            </div>
+            <div className="space-y-1.5">
               <Label>Recovery code</Label>
-              <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="XXXX-XXXX-XXXX" autoFocus />
+              <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="XXXX-XXXX-XXXX" />
             </div>
             <div className="space-y-1.5">
               <Label>New password</Label>
@@ -114,7 +118,13 @@ function LoginInner() {
           </form>
         )}
 
-        <div className="mt-6 text-center">
+        {mode === "login" && (
+          <p className="mt-5 text-center text-sm text-muted-foreground">
+            No account yet?{" "}
+            <Link href="/register" className="font-medium text-primary hover:underline">Create one</Link>
+          </p>
+        )}
+        <div className="mt-2 text-center">
           <Link href="/" className="text-xs text-muted-foreground hover:text-foreground">← Back to wishlist</Link>
         </div>
       </Card>

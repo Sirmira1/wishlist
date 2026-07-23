@@ -14,6 +14,7 @@ import {
   DatabaseBackup,
   Trophy,
   Map,
+  Users,
 } from "lucide-react";
 
 export type NavItem = {
@@ -21,6 +22,7 @@ export type NavItem = {
   label: string;
   icon: LucideIcon;
   adminOnly?: boolean;
+  authOnly?: boolean;
 };
 
 export type NavSection = { title: string; items: NavItem[] };
@@ -30,7 +32,8 @@ export const NAV_SECTIONS: NavSection[] = [
     title: "Overview",
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/items", label: "All Items", icon: Package },
+      { href: "/items", label: "My Items", icon: Package },
+      { href: "/people", label: "People", icon: Users },
       { href: "/analytics", label: "Analytics", icon: BarChart3 },
       { href: "/activity", label: "Activity", icon: Activity },
     ],
@@ -53,11 +56,11 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: "Admin",
+    title: "Account",
     items: [
+      { href: "/settings", label: "Settings", icon: Settings, authOnly: true },
       { href: "/import", label: "Import / Export", icon: Upload, adminOnly: true },
       { href: "/backup", label: "Backup", icon: DatabaseBackup, adminOnly: true },
-      { href: "/settings", label: "Settings", icon: Settings, adminOnly: true },
     ],
   },
 ];

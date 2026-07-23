@@ -59,7 +59,10 @@ export default function DashboardPage() {
         <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="flex items-center gap-2 text-sm font-medium text-primary">
-              <Sparkles className="h-4 w-4" /> {session?.isAdmin ? `Welcome back, ${session.username}` : "Everything I want"}
+              <Sparkles className="h-4 w-4" />{" "}
+              {session?.isAuthenticated
+                ? `Welcome back, ${session.displayName || session.username}`
+                : "Everything I want"}
             </p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-4xl">
               Your Life Wishlist

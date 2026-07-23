@@ -12,6 +12,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const isAdmin = session?.isAdmin;
+  const isAuth = session?.isAuthenticated;
 
   return (
     <div className="flex h-full flex-col gap-1">
@@ -31,7 +32,9 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav className="flex-1 space-y-5 overflow-y-auto no-scrollbar pb-4">
         {NAV_SECTIONS.map((section) => {
-          const items = section.items.filter((i) => !i.adminOnly || isAdmin);
+          const items = section.items.filter(
+            (i) => (!i.adminOnly || isAdmin) && (!i.authOnly || isAuth)
+          );
           if (!items.length) return null;
           return (
             <div key={section.title}>
@@ -78,8 +81,11 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <div className="rounded-xl bg-muted/50 p-3 text-xs text-muted-foreground">
         {isAdmin ? (
           <span className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" /> Admin mode ·{" "}
-            {session?.username}
+            <span className="h-2 w-2 rounded-full bg-emerald-500" /> Admin · {session?.username}
+          </span>
+        ) : isAuth ? (
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-primary" /> {session?.displayName || session?.username}
           </span>
         ) : (
           <span className="flex items-center gap-1.5">

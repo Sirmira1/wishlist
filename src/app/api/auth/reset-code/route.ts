@@ -1,11 +1,11 @@
 import { handle, ok } from "@/lib/api";
-import { requireAdmin, generateResetCode } from "@/lib/auth";
+import { requireUser, generateResetCode } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-// Admin generates a one-time recovery code to store somewhere safe.
+// Generate a one-time recovery code for the current account.
 export const POST = handle(async () => {
-  await requireAdmin();
-  const code = await generateResetCode();
+  const session = await requireUser();
+  const code = await generateResetCode(session.userId);
   return ok({ code });
 });

@@ -72,6 +72,8 @@ export interface Item {
   customFields?: CustomField[] | null;
   categoryId?: string | null;
   category?: TaxonomyRef | null;
+  userId?: string | null;
+  user?: { id: string; username: string; displayName: string | null } | null;
   collections: TaxonomyRef[];
   rooms: TaxonomyRef[];
   vehicle?: Vehicle | null;
@@ -135,9 +137,23 @@ export interface ItemsResponse {
 }
 
 export interface Session {
+  isAuthenticated: boolean;
   isAdmin: boolean;
+  userId: string | null;
   username: string | null;
+  displayName: string | null;
+  role: "ADMIN" | "USER" | null;
   setupComplete: boolean;
   publicViewing: boolean;
+  allowRegistration: boolean;
   autoLogoutMinutes: number;
+}
+
+export interface PublicUser {
+  id: string;
+  username: string;
+  displayName: string | null;
+  role: "ADMIN" | "USER";
+  createdAt: string;
+  _count?: { items: number; collections: number; rooms: number };
 }

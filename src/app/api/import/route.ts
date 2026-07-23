@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { handle, ok } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { itemInputSchema } from "@/lib/validations";
 import { logActivity } from "@/lib/activity";
 import { uniqueSlug, slugify } from "@/lib/utils";
@@ -15,7 +15,7 @@ const importSchema = z.object({
 });
 
 export const POST = handle(async (req: Request) => {
-  await requireAdmin();
+  const session = await requireUser();
   const { items, createMissingCategories } = importSchema.parse(await req.json());
 
   // Pre-resolve category names → ids.
@@ -77,6 +77,7 @@ export const POST = handle(async (req: Request) => {
           quantityDesired: parsed.quantityDesired ?? 1,
           quantityOwned: parsed.quantityOwned ?? 0,
           categoryId,
+          userId: session.userId,
         },
       });
       created++;
@@ -85,6 +86,6 @@ export const POST = handle(async (req: Request) => {
     }
   }
 
-  await logActivity("IMPORT", `Imported ${created} item(s)`);
+  await logActivity("IMPORT", `Imported ${created} item(s)`, { userId: session.userId });
   return ok({ created, failed: errors.length, errors: errors.slice(0, 25) });
 });

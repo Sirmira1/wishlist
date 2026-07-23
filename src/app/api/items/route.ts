@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { handle, ok, fail } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { canView, requireAdmin } from "@/lib/auth";
+import { canView, requireUser, resolveWishlistOwner } from "@/lib/auth";
 import { itemInclude, createItem } from "@/lib/items";
 import { itemInputSchema } from "@/lib/validations";
 import { effectivePrice, totalItemCost } from "@/lib/utils";
@@ -19,10 +19,12 @@ export const GET = handle(async (req: Request) => {
   const categoryId = searchParams.get("categoryId") || undefined;
   const collectionId = searchParams.get("collectionId") || undefined;
   const roomId = searchParams.get("roomId") || undefined;
+  const userId = searchParams.get("userId") || undefined;
   const tag = searchParams.get("tag") || undefined;
   const favorite = searchParams.get("favorite");
   const pinned = searchParams.get("pinned");
   const isPcPart = searchParams.get("isPcPart");
+  const allUsers = searchParams.get("allUsers") === "true";
   const minPrice = searchParams.get("minPrice");
   const maxPrice = searchParams.get("maxPrice");
   const sort = searchParams.get("sort") || "createdAt";
@@ -49,6 +51,14 @@ export const GET = handle(async (req: Request) => {
   }
   if (status.length) and.push({ status: { in: status } });
   if (priority.length) and.push({ priority: { in: priority } });
+  // Owner scope: explicit ?userId, else the viewer's own wishlist, else admin's.
+  // `allUsers=true` opts out of scoping (used for global search).
+  if (!allUsers) {
+    const ownerId = await resolveWishlistOwner(userId);
+    if (ownerId) and.push({ userId: ownerId });
+  } else if (userId) {
+    and.push({ userId });
+  }
   if (categoryId) and.push({ categoryId });
   if (collectionId) and.push({ collections: { some: { id: collectionId } } });
   if (roomId) and.push({ rooms: { some: { id: roomId } } });
@@ -107,8 +117,8 @@ export const GET = handle(async (req: Request) => {
 });
 
 export const POST = handle(async (req: Request) => {
-  await requireAdmin();
+  const session = await requireUser();
   const input = itemInputSchema.parse(await req.json());
-  const item = await createItem(input);
+  const item = await createItem(input, session.userId);
   return ok(item, { status: 201 });
 });

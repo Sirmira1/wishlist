@@ -75,7 +75,7 @@ export default function RoomsPage() {
   return (
     <div>
       <PageHeader title="Rooms" description="Organize your acquisitions by space — plan whole rooms at a glance." icon={DoorOpen}>
-        {session?.isAdmin && <CreateRoomDialog />}
+        {session?.isAuthenticated && <CreateRoomDialog />}
       </PageHeader>
 
       {isLoading ? (

@@ -63,7 +63,7 @@ export default function PcBuildsPage() {
         {parts.length > 0 && (
           <Button variant="outline" onClick={exportSummary}><Download className="h-4 w-4" /> Export</Button>
         )}
-        {session?.isAdmin && (
+        {session?.isAuthenticated && (
           <Button asChild variant="gradient"><Link href="/items/new"><Plus className="h-4 w-4" /> Add Part</Link></Button>
         )}
       </PageHeader>
@@ -75,7 +75,7 @@ export default function PcBuildsPage() {
           icon={Cpu}
           title="No PC parts yet"
           description="Add items and mark them as a “PC Part” with a part type to build out your rig here."
-          action={session?.isAdmin ? <Button asChild variant="gradient"><Link href="/items/new">Add a part</Link></Button> : undefined}
+          action={session?.isAuthenticated ? <Button asChild variant="gradient"><Link href="/items/new">Add a part</Link></Button> : undefined}
         />
       ) : (
         <div className="space-y-6">

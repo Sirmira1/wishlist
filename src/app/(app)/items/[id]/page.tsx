@@ -71,6 +71,8 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   }
   if (isError || !item) return notFound();
 
+  const canEdit =
+    session?.isAdmin || (session?.userId != null && item.user?.id === session.userId);
   const image = activeImg || item.imageUrl;
   const total = totalItemCost(item);
   const savings = potentialSavings(item);
@@ -94,14 +96,19 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
         <Button asChild variant="ghost" size="sm">
           <Link href="/items"><ArrowLeft className="h-4 w-4" /> Back to items</Link>
         </Button>
-        {session?.isAdmin && (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          {item.user && (
+            <Link href={`/people/${item.user.username}`} className="mr-1 hidden text-sm text-muted-foreground hover:text-foreground sm:inline">
+              @{item.user.username}
+            </Link>
+          )}
+          {canEdit && (
             <Button asChild variant="outline" size="sm">
               <Link href={`/items/${item.id}/edit`}><Pencil className="h-4 w-4" /> Edit</Link>
             </Button>
-            <ItemActions item={item} size="icon" />
-          </div>
-        )}
+          )}
+          <ItemActions item={item} size="icon" />
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
@@ -184,7 +191,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
               <Row label="Quantity desired" value={item.quantityDesired} />
               {item.quantityOwned > 0 && <Row label="Quantity owned" value={item.quantityOwned} />}
             </div>
-            {session?.isAdmin && (
+            {canEdit && (
               <Button variant="outline" size="sm" className="mt-3 w-full" onClick={() => setPriceOpen(true)}>
                 <Plus className="h-4 w-4" /> Record price change
               </Button>

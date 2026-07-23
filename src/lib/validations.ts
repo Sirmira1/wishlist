@@ -139,6 +139,7 @@ export const priceHistorySchema = z.object({
 export const settingsSchema = z.object({
   adminUsername: z.string().trim().min(2).max(60).optional(),
   publicViewing: z.boolean().optional(),
+  allowRegistration: z.boolean().optional(),
   autoLogoutMinutes: z.coerce.number().min(5).max(1440).optional(),
   theme: z.enum(["light", "dark", "system"]).optional(),
   accentColor: z.string().optional(),
@@ -154,6 +155,32 @@ export const setupSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters").max(200),
 });
 
+export const registerSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(2, "Username too short")
+    .max(60)
+    .regex(/^[a-zA-Z0-9_.-]+$/, "Letters, numbers, dots, dashes and underscores only"),
+  displayName: z.string().trim().max(80).optional(),
+  password: z.string().min(8, "Password must be at least 8 characters").max(200),
+});
+
+export const meSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(2)
+    .max(60)
+    .regex(/^[a-zA-Z0-9_.-]+$/, "Letters, numbers, dots, dashes and underscores only")
+    .optional(),
+  displayName: z.string().trim().max(80).optional().nullable(),
+  monthlyBudget: optionalNumber,
+  yearlyBudget: optionalNumber,
+  savingsGoal: optionalNumber,
+  savingsCurrent: optionalNumber,
+});
+
 export const loginSchema = z.object({
   username: z.string().trim().min(1),
   password: z.string().min(1),
@@ -165,6 +192,7 @@ export const changePasswordSchema = z.object({
 });
 
 export const resetPasswordSchema = z.object({
+  username: z.string().trim().min(1),
   code: z.string().min(1),
   newPassword: z.string().min(8, "Password must be at least 8 characters").max(200),
 });

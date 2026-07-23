@@ -21,8 +21,8 @@ function ItemsInner() {
 
   return (
     <div>
-      <PageHeader title="All Items" description="Everything you want to own, buy, upgrade or collect." icon={Package}>
-        {session?.isAdmin && (
+      <PageHeader title="My Items" description="Everything you want to own, buy, upgrade or collect." icon={Package}>
+        {session?.isAuthenticated && (
           <Button asChild variant="gradient">
             <Link href="/items/new">
               <Plus className="h-4 w-4" /> New Item

@@ -1,6 +1,6 @@
 import { handle, ok, fail } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { canView, requireAdmin } from "@/lib/auth";
+import { canView, requireEdit } from "@/lib/auth";
 import { roomSchema } from "@/lib/validations";
 import { itemInclude } from "@/lib/items";
 import { logActivity } from "@/lib/activity";
@@ -21,8 +21,10 @@ export const GET = handle(async (_req: Request, { params }: Ctx) => {
 });
 
 export const PATCH = handle(async (req: Request, { params }: Ctx) => {
-  await requireAdmin();
   const { id } = await params;
+  const existing = await prisma.room.findUnique({ where: { id }, select: { userId: true } });
+  if (!existing) return fail("Room not found", 404);
+  await requireEdit(existing.userId);
   const data = roomSchema.partial().parse(await req.json());
   const room = await prisma.room.update({
     where: { id },
@@ -40,8 +42,10 @@ export const PATCH = handle(async (req: Request, { params }: Ctx) => {
 });
 
 export const DELETE = handle(async (_req: Request, { params }: Ctx) => {
-  await requireAdmin();
   const { id } = await params;
+  const existing = await prisma.room.findUnique({ where: { id }, select: { userId: true } });
+  if (!existing) return fail("Room not found", 404);
+  await requireEdit(existing.userId);
   await prisma.room.delete({ where: { id } });
   return ok({ success: true });
 });

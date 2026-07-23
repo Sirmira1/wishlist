@@ -1,6 +1,6 @@
 import { handle, ok, fail } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
+import { requireUser, canEdit } from "@/lib/auth";
 import { itemInclude } from "@/lib/items";
 import { logActivity } from "@/lib/activity";
 import { uniqueSlug } from "@/lib/utils";
@@ -8,7 +8,7 @@ import { uniqueSlug } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export const POST = handle(async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
-  await requireAdmin();
+  const session = await requireUser();
   const { id } = await params;
   const src = await prisma.item.findUnique({
     where: { id },
@@ -16,10 +16,14 @@ export const POST = handle(async (_req: Request, { params }: { params: Promise<{
   });
   if (!src) return fail("Item not found", 404);
 
+  // The copy is owned by the current user (fork into your own wishlist).
+  // Only carry over collections/rooms when duplicating your own item.
+  const own = canEdit(session, src.userId);
   const copy = await prisma.item.create({
     data: {
       title: `${src.title} (copy)`,
       slug: uniqueSlug(src.title),
+      userId: session.userId,
       description: src.description,
       notes: src.notes,
       brand: src.brand,
@@ -49,8 +53,8 @@ export const POST = handle(async (_req: Request, { params }: { params: Promise<{
       pcPartType: src.pcPartType,
       customFields: src.customFields ?? undefined,
       categoryId: src.categoryId,
-      collections: { connect: src.collections.map((c) => ({ id: c.id })) },
-      rooms: { connect: src.rooms.map((r) => ({ id: r.id })) },
+      collections: own ? { connect: src.collections.map((c) => ({ id: c.id })) } : undefined,
+      rooms: own ? { connect: src.rooms.map((r) => ({ id: r.id })) } : undefined,
     },
     include: itemInclude,
   });
@@ -58,6 +62,7 @@ export const POST = handle(async (_req: Request, { params }: { params: Promise<{
   await logActivity("ITEM_ADDED", `Duplicated “${src.title}”`, {
     itemId: copy.id,
     itemTitle: copy.title,
+    userId: session.userId,
   });
   return ok(copy, { status: 201 });
 });

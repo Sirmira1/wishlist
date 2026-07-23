@@ -1,33 +1,27 @@
 import { handle, ok, fail } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import {
-  requireAdmin,
-  getSettings,
-  verifyPassword,
-  hashPassword,
-  createSession,
-} from "@/lib/auth";
+import { requireUser, verifyPassword, hashPassword, createSession } from "@/lib/auth";
 import { changePasswordSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
 export const POST = handle(async (req: Request) => {
-  await requireAdmin();
+  const session = await requireUser();
   const { currentPassword, newPassword } = changePasswordSchema.parse(await req.json());
 
-  const settings = await getSettings();
-  if (!settings.passwordHash) return fail("Setup not complete.", 409);
-  if (!(await verifyPassword(currentPassword, settings.passwordHash))) {
+  const user = await prisma.user.findUnique({ where: { id: session.userId } });
+  if (!user) return fail("User not found.", 404);
+  if (!(await verifyPassword(currentPassword, user.passwordHash))) {
     return fail("Current password is incorrect.", 401);
   }
 
   const passwordHash = await hashPassword(newPassword);
-  // Bump tokenVersion to log out any other sessions, then refresh this one.
-  const updated = await prisma.settings.update({
-    where: { id: settings.id },
+  // Bump tokenVersion to sign out other sessions, then refresh this one.
+  const updated = await prisma.user.update({
+    where: { id: user.id },
     data: { passwordHash, tokenVersion: { increment: 1 } },
   });
-  await createSession(updated.adminUsername, updated.tokenVersion, updated.autoLogoutMinutes);
+  await createSession(updated);
 
   return ok({ success: true });
 });

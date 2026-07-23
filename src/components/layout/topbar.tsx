@@ -38,7 +38,7 @@ export function Topbar() {
       </button>
 
       <div className="ml-auto flex items-center gap-1.5">
-        {session?.isAdmin && (
+        {session?.isAuthenticated && (
           <>
             <Button
               variant="gradient"

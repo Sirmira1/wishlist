@@ -12,17 +12,18 @@ datasource db {
 }
 
 // ------------------------------------------------------------------
-// Singleton settings + admin credentials
+// App-wide settings (singleton). Admin credentials now live on User.
 // ------------------------------------------------------------------
 model Settings {
   id                String   @id @default("singleton")
-  adminUsername     String   @default("admin")
-  passwordHash      String? // null until first-run /setup completes
+  adminUsername     String   @default("admin") // legacy; kept for migration reference
+  passwordHash      String? // legacy; auth now uses the User table
   resetCodeHash     String? // hashed security code for password reset
-  tokenVersion      Int      @default(0) // bump to invalidate every active session
+  tokenVersion      Int      @default(0)
   publicViewing     Boolean  @default(true)
+  allowRegistration Boolean  @default(true) // anyone can create their own wishlist
   autoLogoutMinutes Int      @default(30)
-  theme             String   @default("system") // light | dark | system
+  theme             String   @default("system")
   accentColor       String   @default("violet")
   currency          String   @default("USD")
   monthlyBudget     Float?
@@ -31,6 +32,33 @@ model Settings {
   savingsCurrent    Float?   @default(0)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+// ------------------------------------------------------------------
+// Users — each owns their own wishlist. First user (role ADMIN) can
+// view & edit everyone's; others edit only their own.
+// ------------------------------------------------------------------
+model User {
+  id             String   @id @default(cuid())
+  username       String   @unique
+  displayName    String?
+  passwordHash   String
+  role           String   @default("USER") // ADMIN | USER
+  tokenVersion   Int      @default(0) // bump to invalidate this user's sessions
+  resetCodeHash  String?
+  monthlyBudget  Float?
+  yearlyBudget   Float?
+  savingsGoal    Float?
+  savingsCurrent Float?   @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  items       Item[]
+  collections Collection[]
+  rooms       Room[]
+  budgets     Budget[]
+
+  @@index([role])
 }
 
 // ------------------------------------------------------------------
@@ -68,10 +96,13 @@ model Collection {
   children     Collection[] @relation("CollectionTree")
   items        Item[]       @relation("ItemCollections")
   budgets      Budget[]
+  userId       String?
+  user         User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
   @@index([parentId])
+  @@index([userId])
 }
 
 model Room {
@@ -83,8 +114,12 @@ model Room {
   description String?
   imageUrl    String?
   items       Item[]   @relation("ItemRooms")
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([userId])
 }
 
 // ------------------------------------------------------------------
@@ -141,6 +176,9 @@ model Item {
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   collections  Collection[]   @relation("ItemCollections")
   rooms        Room[]         @relation("ItemRooms")
   vehicle      Vehicle?
@@ -153,6 +191,7 @@ model Item {
   updatedAt DateTime @updatedAt
 
   @@index([categoryId])
+  @@index([userId])
   @@index([status])
   @@index([priority])
   @@index([createdAt])
@@ -198,8 +237,12 @@ model Budget {
   category     Category?   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   collectionId String?
   collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
+
+  @@index([userId])
 }
 
 model Activity {
@@ -208,8 +251,10 @@ model Activity {
   message   String
   itemId    String?
   itemTitle String?
+  userId    String? // whose wishlist this activity belongs to
   meta      Json?
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+  @@index([userId])
 }

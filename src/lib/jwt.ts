@@ -4,10 +4,12 @@ import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 
 export const SESSION_COOKIE = "lw_session";
 
+export type Role = "ADMIN" | "USER";
+
 export type SessionPayload = JWTPayload & {
-  sub: string; // admin username
-  tv: number; // token version — must match Settings.tokenVersion
-  role: "admin";
+  sub: string; // user id
+  tv: number; // token version — must match User.tokenVersion
+  role: Role;
 };
 
 function getSecret(): Uint8Array {
@@ -19,10 +21,10 @@ function getSecret(): Uint8Array {
 }
 
 export async function signSession(
-  payload: { sub: string; tv: number },
+  payload: { sub: string; tv: number; role: Role },
   expiresInSeconds: number
 ): Promise<string> {
-  return new SignJWT({ ...payload, role: "admin" })
+  return new SignJWT({ sub: payload.sub, tv: payload.tv, role: payload.role })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(Math.floor(Date.now() / 1000) + expiresInSeconds)

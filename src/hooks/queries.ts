@@ -12,8 +12,21 @@ import type {
   Budget,
   Activity,
   Session,
+  PublicUser,
 } from "@/types";
 import type { Stats } from "@/lib/stats";
+
+export type Me = {
+  id: string;
+  username: string;
+  displayName: string | null;
+  role: "ADMIN" | "USER";
+  monthlyBudget: number | null;
+  yearlyBudget: number | null;
+  savingsGoal: number | null;
+  savingsCurrent: number | null;
+  hasResetCode: boolean;
+};
 
 function itemsQueryString(f: Partial<Filters> & { page?: number; pageSize?: number }): string {
   const p = new URLSearchParams();
@@ -61,6 +74,31 @@ export function useItem(idOrSlug: string) {
 
 export function useCategories() {
   return useQuery({ queryKey: ["categories"], queryFn: () => api.get<Category[]>("/api/categories") });
+}
+
+export function useUsers() {
+  return useQuery({ queryKey: ["users"], queryFn: () => api.get<PublicUser[]>("/api/users") });
+}
+
+export function useMe(enabled = true) {
+  return useQuery({
+    queryKey: ["me"],
+    queryFn: () => api.get<Me>("/api/me"),
+    enabled,
+    retry: false,
+  });
+}
+
+export function useUpdateMe() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: Record<string, unknown>) => api.patch<Me>("/api/me", patch),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["me"] });
+      qc.invalidateQueries({ queryKey: ["session"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
+    },
+  });
 }
 
 export function useCollections() {

@@ -1,7 +1,7 @@
 import Papa from "papaparse";
 import { handle, fail } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { canView } from "@/lib/auth";
+import { canView, resolveWishlistOwner } from "@/lib/auth";
 import { totalItemCost, effectivePrice } from "@/lib/utils";
 import { itemInclude } from "@/lib/items";
 
@@ -14,11 +14,14 @@ export const GET = handle(async (req: Request) => {
   const categoryId = searchParams.get("categoryId") || undefined;
   const collectionId = searchParams.get("collectionId") || undefined;
 
-  const where = categoryId
-    ? { categoryId }
-    : collectionId
-      ? { collections: { some: { id: collectionId } } }
-      : {};
+  // Scope to a wishlist owner: explicit ?userId, else current user, else admin.
+  const ownerId = await resolveWishlistOwner(searchParams.get("userId"));
+
+  const where = {
+    ...(ownerId ? { userId: ownerId } : {}),
+    ...(categoryId ? { categoryId } : {}),
+    ...(collectionId ? { collections: { some: { id: collectionId } } } : {}),
+  };
 
   const items = await prisma.item.findMany({ where, include: itemInclude, orderBy: { createdAt: "desc" } });
 

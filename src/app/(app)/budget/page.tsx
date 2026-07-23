@@ -171,8 +171,9 @@ export default function BudgetPage() {
 
   // Current saved savings goal (for prefilling the targets form).
   const { data: settingsData } = useQuery<{ savingsGoal?: number | null }>({
-    queryKey: ["settings", "budget"],
-    queryFn: () => api.get("/api/settings"),
+    queryKey: ["me"],
+    queryFn: () => api.get("/api/me"),
+    enabled: Boolean(session?.isAuthenticated),
   });
 
   const [monthly, setMonthly] = useState("");
@@ -192,7 +193,7 @@ export default function BudgetPage() {
   }, [settingsData?.savingsGoal]);
 
   async function saveTargets() {
-    await api.patch("/api/settings", {
+    await api.patch("/api/me", {
       monthlyBudget: monthly || null,
       yearlyBudget: yearly || null,
       savingsGoal: savings || null,
@@ -215,7 +216,7 @@ export default function BudgetPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Budget & Goals" description="Plan spending and predict when you’ll complete your wishlist." icon={Wallet}>
-        {session?.isAdmin && <CreateBudgetDialog />}
+        {session?.isAuthenticated && <CreateBudgetDialog />}
       </PageHeader>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -272,7 +273,7 @@ export default function BudgetPage() {
       )}
 
       {/* Edit targets (admin) */}
-      {session?.isAdmin && (
+      {session?.isAuthenticated && (
         <Card className="p-6">
           <h3 className="font-semibold">Set targets</h3>
           <p className="mb-4 mt-1 flex items-start gap-1.5 text-xs text-muted-foreground">
@@ -294,7 +295,7 @@ export default function BudgetPage() {
         <h3 className="mb-3 font-semibold">Budgets</h3>
         {!budgets?.length ? (
           <p className="rounded-2xl border border-dashed border-border/70 py-10 text-center text-sm text-muted-foreground">
-            No custom budgets yet.{session?.isAdmin ? " Create one to track spending by category or collection." : ""}
+            No custom budgets yet.{session?.isAuthenticated ? " Create one to track spending by category or collection." : ""}
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -311,7 +312,7 @@ export default function BudgetPage() {
                         {b.period.toLowerCase()} · {b.category?.name ?? b.collection?.name ?? "global"}
                       </p>
                     </div>
-                    {session?.isAdmin && (
+                    {session?.isAuthenticated && (
                       <div className="flex items-center">
                         <EditBudgetDialog budget={b} />
                         <Button variant="ghost" size="icon-sm" onClick={() => del.mutate(b.id, { onSuccess: () => toast.success("Budget removed") })}>
